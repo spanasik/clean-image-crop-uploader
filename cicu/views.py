@@ -9,6 +9,7 @@ from .forms import UploadedFileForm
 from .models import UploadedFile
 from .settings import IMAGE_CROPPED_UPLOAD_TO
 from django.conf import settings
+import math
 
 
 @csrf_exempt
@@ -39,15 +40,16 @@ def crop(request):
         if request.method == 'POST':
             box = request.POST.get('cropping', None)
             imageId = request.POST.get('id', None)
+            cropHeight = int(request.POST.get('cropHeight', None))
+            cropWidth = int(request.POST.get('cropWidth', None))
             uploaded_file = UploadedFile.objects.get(id=imageId)
             img = Image.open( uploaded_file.file.path, mode='r' )
-            values = [int(x) for x in box.split(',')]
+            values = [int(math.floor(float(x))) for x in box.split(',')]
 
             width = abs(values[2] - values[0])
             height = abs(values[3] - values[1])
             if width and height and (width != img.size[0] or height != img.size[1]):
-                croppedImage = img.crop(values).resize((width,height),Image.ANTIALIAS)
-
+                croppedImage = img.crop(values).resize((cropWidth,cropHeight),Image.ANTIALIAS)
             else:
                 raise
 
@@ -70,4 +72,4 @@ def crop(request):
             return HttpResponse(simplejson.dumps(data))
 
     except Exception, e:
-        return HttpResponseBadRequest(simplejson.dumps({'errors': 'illegal request'}))
+        return HttpResponseBadRequest(simplejson.dumps({'errors': exception_format(e)}))
